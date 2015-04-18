@@ -1,6 +1,13 @@
 package com.baptistebilly.model;
 
+import javax.persistence.*;
+
+
+@Table
+@Entity
 public class Utilisateur {
+	
+	private Long id;
 	private String pseudo;
 	private String mail;
 	private String nom;
@@ -9,8 +16,20 @@ public class Utilisateur {
 	private String description;
 	private String siteWeb;
 	private String hobbies;
+	private String etat;
 	
-
+	public Utilisateur() {
+		
+	}
+	
+	@Id
+	@GeneratedValue
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
 	public String getPseudo() {
 		return pseudo;
 	}
@@ -58,6 +77,12 @@ public class Utilisateur {
 	}
 	public void setHobbies(String hobbies) {
 		this.hobbies = hobbies;
+	}
+	public String getEtat() {
+		return etat;
+	}
+	public void setEtat(String etat) {
+		this.etat = etat;
 	}
 	
 	
