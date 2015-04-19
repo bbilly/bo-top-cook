@@ -22,6 +22,14 @@ public class Utilisateur {
 		
 	}
 	
+	public Utilisateur(String pseudo, String mail, String nom, String prenom) {
+		this.pseudo = pseudo;
+		this.mail = mail;
+		this.nom = nom;
+		this.prenom = prenom;
+		this.etat = "VALIDE";
+	}
+	
 	@Id
 	@GeneratedValue
 	public Long getId() {

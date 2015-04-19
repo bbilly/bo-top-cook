@@ -1,19 +1,27 @@
 package com.baptistebilly.dao;
 
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.jasypt.util.password.StrongPasswordEncryptor;
 
 import com.baptistebilly.model.Utilisateur;
+import com.baptistebilly.util.HibernateUtil;
 
 
 
-public class UtilisateurDAO extends DAO {
+public class UtilisateurDAO {
 
 	public UtilisateurDAO() {
-		super();
 	}
+	
+	private Session session = HibernateUtil.getSessionFactory().openSession();
 	/*
 	public Utilisateur getUser(String login) throws SQLException {
 		Utilisateur u = null;
@@ -61,29 +69,37 @@ public class UtilisateurDAO extends DAO {
 		
 	}
 	
-	public boolean ajouterUtilisateur(Utilisateur u) throws SQLException {
-		Connection conn = this.getConnection();
-		PreparedStatement ps = null;
-		try {
-			ps = conn.prepareStatement("INSERT INTO Utilisateur(pseudo,password,mail,nom,prenom,isAdmin,etat) values(?,?,?,?,?,0,'ATTENTE')");
-			ps.setString(1, u.getPseudo());
-			ps.setString(2, u.getPassword());
-			ps.setString(3, u.getMail());
-			ps.setString(4, u.getNom());
-			ps.setString(5, u.getPrenom());
-			int res = ps.executeUpdate();
-			if(res==0)return true;
-			else return false;
-
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Erreur SQL : " + e.getMessage());
-			e.printStackTrace();
+	*/
+	
+	public boolean creerUtilisateur(Utilisateur u, String password) {
+		Query query = session.createSQLQuery("SELECT count(*) FROM utilisateur WHERE pseudo = :pseudo OR mail=:mail ");
+		query.setString("pseudo", u.getPseudo());
+		query.setString("mail", u.getMail());
+		Integer count = ((BigInteger) query.uniqueResult()).intValue();
+		if( count == 0 ) {
+	        session.beginTransaction();
+	        session.save(u);
+	        	        
+	        //cryptage du mot de passe
+	        StrongPasswordEncryptor passwordEncryptor = new StrongPasswordEncryptor();
+			String encryptedPassword = passwordEncryptor.encryptPassword(password);
+			Query query2 = session.createSQLQuery("INSERT into connexion(id,password,token) VALUES(:id,:password,'') ");
+			query2.setParameter("id", u.getId());
+			query2.setParameter("password", encryptedPassword);
+			query2.executeUpdate();
+			
+			//on commit la transaction
+			session.getTransaction().commit();
+	        return true;
+		}
+		else {
 			return false;
-		} finally {
-			this.closeConnection(ps);
-			this.closeConnection(conn);
 		}
 	}
-	*/
+	
+	public List getPseudos() {
+		Query query =  session.createSQLQuery("SELECT pseudo FROM utilisateur");
+		List result = query.list();
+		return result;
+	}
 }
