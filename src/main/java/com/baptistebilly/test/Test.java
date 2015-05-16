@@ -20,7 +20,10 @@ public class Test {
 		
 		System.out.println(encryptedPassword);
 		*/
-		Utilisateur u = new Utilisateur("dffdfd","toto@yopmail.com","TEST","marthin");
-		System.out.println(user_dao.creerUtilisateur(u, "mother589"));
+		//Utilisateur u = new Utilisateur("demo","demo@yopmail.com","DEMO","DEMO");
+		//user_dao.creerUtilisateur(u, "demo");
+		//user_dao.connexion("demo@yopmail.com", "demo");
+		//Utilisateur u = user_dao.getUser((long) 5);
+		//System.out.println(u.getMail());
 	}
 }

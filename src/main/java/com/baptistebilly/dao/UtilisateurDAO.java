@@ -1,18 +1,20 @@
 package com.baptistebilly.dao;
 
 import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+
+import javassist.convert.Transformer;
 
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.jasypt.util.password.StrongPasswordEncryptor;
 
+import com.baptistebilly.model.Connexion;
 import com.baptistebilly.model.Utilisateur;
 import com.baptistebilly.util.HibernateUtil;
+import com.baptistebilly.util.SessionIdentifierGenerator;
 
 
 
@@ -22,60 +24,22 @@ public class UtilisateurDAO {
 	}
 	
 	private Session session = HibernateUtil.getSessionFactory().openSession();
-	/*
-	public Utilisateur getUser(String login) throws SQLException {
-		Utilisateur u = null;
-		Connection conn = this.getConnection();
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		try {
-			ps =  conn.prepareStatement("SELECT pseudo, password, mail, nom, prenom, etat, isAdmin from utilisateur WHERE pseudo= ?");
-			ps.setString(1,login);
-			rs = ps.executeQuery();
-			while(rs.next()) {
-				u = new Utilisateur(rs.getString("pseudo"),rs.getString("password"), rs.getString("mail"), rs.getString("nom"), rs.getString("prenom"), rs.getString("etat"), rs.getBoolean("isAdmin"));
-			}
 
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Erreur SQL : " + e.getMessage());
-			e.printStackTrace();
-		} finally {
-			this.closeConnection(rs);
-			this.closeConnection(ps);
-			this.closeConnection(conn);
-		}
-		return u;
+	public Utilisateur getUser(Long id) {
+		Query query = session.createQuery("FROM Utilisateur WHERE id = :id");
+		query.setParameter("id", id);
+		return (Utilisateur) query.uniqueResult();
 	}
 	
-	public boolean validerUtilisateur(String pseudo) throws SQLException {
-		Connection conn = this.getConnection();
-		PreparedStatement ps = null;
-		try {
-			 ps = conn.prepareStatement("UPDATE Utilisateur SET etat='VALIDE' WHERE pseudo=?");
-			ps.setString(1, pseudo);
-			int res = ps.executeUpdate();
-			if(res==0)return true;
-			else return false;
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Erreur SQL : " + e.getMessage());
-			e.printStackTrace();
-			return false;
-		} finally {
-			this.closeConnection(ps);
-			this.closeConnection(conn);
-		}
+	
 		
-	}
-	
-	*/
-	
 	public boolean creerUtilisateur(Utilisateur u, String password) {
 		Query query = session.createSQLQuery("SELECT count(*) FROM utilisateur WHERE pseudo = :pseudo OR mail=:mail ");
 		query.setString("pseudo", u.getPseudo());
 		query.setString("mail", u.getMail());
 		Integer count = ((BigInteger) query.uniqueResult()).intValue();
+		
+		//si login ou adresse mail n'existe pas déja en BDD
 		if( count == 0 ) {
 	        session.beginTransaction();
 	        session.save(u);
@@ -95,6 +59,44 @@ public class UtilisateurDAO {
 		else {
 			return false;
 		}
+	}
+	
+	public boolean modifierUtilisateur(Utilisateur u) {
+		Transaction tx = session.beginTransaction();
+		session.update(u);
+		tx.commit();
+		session.close();
+		return true;
+	}
+	
+	public Connexion connexion(String identifiant, String password) {
+		Query query = session.createSQLQuery("SELECT c.* FROM connexion c, utilisateur u WHERE u.id=c.id and (u.mail = :mail OR u.pseudo = :pseudo) ").addEntity("connexion",Connexion.class);
+		query.setParameter("mail", identifiant);
+		query.setParameter("pseudo", identifiant);
+		
+		if( query.uniqueResult() != null) {
+			//on recupere l'objet
+			Connexion c =(Connexion) query.list().get(0);
+			StrongPasswordEncryptor passwordEncryptor = new StrongPasswordEncryptor();
+			if(passwordEncryptor.checkPassword( password, c.getPassword() )) {
+				SessionIdentifierGenerator a = new SessionIdentifierGenerator();
+				session.beginTransaction();
+				Query query2 = session.createSQLQuery("UPDATE connexion SET token = :token WHERE id = :id");
+				query2.setParameter("token", a.nextSessionId());
+				query2.setParameter("id", c.getId());
+				query2.executeUpdate();
+				session.getTransaction().commit();
+				return c;
+
+			}
+			else {
+				System.out.println("Mot de passe incorrect");
+				return null;
+			}
+		}
+		
+		return null;
+		
 	}
 	
 	public List getPseudos() {
